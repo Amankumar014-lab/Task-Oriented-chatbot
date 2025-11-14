@@ -18,63 +18,114 @@ pip install -r requirements.txt
 
 ## 🚀 Quick Start
 
-### 1. Check Dependencies
+### Option 1: Use Pre-built Index (Fastest - 2 minutes)
+
+**Recommended for first-time users and demos**
+
 ```bash
-python main.py --check-deps
+# 1. Extract pre-built index
+# (faiss_index.bin and documents.pkl already in project root)
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Launch chatbot
+python app.py
 ```
 
-### 2. Build Pipeline (Process data, create embeddings)
+Open `http://localhost:7860` in your browser!
+
+### Option 2: Build from Scratch (20-30 minutes)
+
+**Only needed if rebuilding index or updating dataset**
+
 ```bash
-python main.py --build
+# 1. Extract dataset
+unzip dataset_jsons.zip
+# This creates: MyFixit-Dataset-master/jsons/
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Build index (one-time)
+python data_processor.py    # Process JSON guides
+python embeddings.py         # Create FAISS index
+
+# 4. Launch chatbot
+python app.py
 ```
 
 This will:
-- Load JSON repair guides from `jsons/` folder
+
+- Load 31,601 JSON repair guides from extracted folder
 - Extract and chunk text into 100-200 word segments
 - Create embeddings using SentenceTransformers
 - Build FAISS index for similarity search
 - Save index files: `faiss_index.bin` and `documents.pkl`
 
-### 3. Launch Chatbot
-```bash
-python main.py --launch
-```
+## 💡 Advanced Usage
 
-Open `http://localhost:7860` in your browser!
-
-### All-in-One Command
-```bash
-python main.py --build --launch
-```
-
-## 💡 Usage Options
+### Local Deployment
 
 ```bash
-# Create public link (for Colab/sharing)
-python main.py --launch --share
+# Standard launch
+python app.py
 
-# Use simplified model (faster, CPU-friendly)
-python main.py --launch --simple
-
-# Custom port
-python main.py --launch --port 8080
-
-# Test all components
-python main.py --test
+# With custom configuration
+# Edit app.py to adjust:
+# - use_simple_model=True (for CPU-only environments)
+# - share=True (for public Gradio link)
 ```
 
-## 📁 New Files
+### Google Colab Deployment
+
+**Fastest way to deploy with GPU acceleration**
+
+1. **Open notebook**: Upload `colab_quickstart.ipynb` to Google Colab
+2. **Upload files**: When prompted, upload these files:
+   - `app.py`
+   - `data_processor.py`
+   - `embeddings.py`
+   - `retriever.py`
+   - `llm_handler.py`
+   - `requirements.txt`
+   - `rag_index.zip` (pre-built index)
+   - `dataset_jsons.zip` (if rebuilding index)
+3. **Run cells**: Execute all cells in sequence
+4. **Get public link**: Gradio generates a public URL valid for 72 hours
+
+**Colab Environment:**
+
+- T4 GPU (free tier)
+- ~13GB RAM
+- ~4GB model memory with 4-bit quantization
+- 6-12 second response time
+
+**Note:** The notebook handles all setup automatically - no manual installation needed!
+
+## 📁 Project Files
 
 ```
-MyFixit-Dataset-master/
+genai_latest/
 ├── data_processor.py       # Document loading and chunking
-├── embeddings.py           # Embedding creation and FAISS
-├── retriever.py            # Document retrieval
+├── embeddings.py           # Embedding creation and FAISS index
+├── retriever.py            # Document retrieval engine
 ├── llm_handler.py          # LLM inference (Mistral 7B)
-├── app.py                  # Gradio web interface
-├── main.py                 # Orchestration script
+├── app.py                  # Gradio web interface (main entry point)
+├── colab_quickstart.ipynb  # Google Colab deployment notebook
 ├── requirements.txt        # Python dependencies
-└── PROJECT_README.md       # Full documentation (this file)
+├── rag_index.zip           # Pre-built FAISS index + documents
+├── dataset_jsons.zip       # Compressed MyFixit dataset
+├── PROJECT_README.md       # User guide (this file)
+├── CLEANUP_SUMMARY.txt     # File organization history
+└── cloud_deployment/       # Copy of core files for easy upload
+    ├── app.py
+    ├── data_processor.py
+    ├── embeddings.py
+    ├── retriever.py
+    ├── llm_handler.py
+    ├── requirements.txt
+    └── colab_quickstart.ipynb
 ```
 
 ## 🏗️ Architecture
@@ -98,38 +149,55 @@ User Query → Retriever (FAISS) → LLM (Mistral 7B) → Response + Sources
 
 ## 🌐 Deployment
 
-### Google Colab
-```python
-!python main.py --build --launch --share
-```
+### Google Colab (Recommended)
+
+Upload `colab_quickstart.ipynb` to Google Colab and run all cells. The notebook will:
+
+- Install dependencies automatically
+- Extract pre-built index or build from scratch
+- Launch Gradio with public shareable link
 
 ### HuggingFace Spaces
+
 1. Create new Gradio Space
-2. Upload all Python files + requirements.txt
-3. Upload `jsons/` folder
-4. Auto-deploys!
+2. Upload all Python files from `cloud_deployment/` folder
+3. Upload `rag_index.zip` and extract in Space
+4. Set `app.py` as entry point
+5. Auto-deploys!
 
 ### Local
+
 ```bash
-python main.py --launch
+# Standard local deployment
+python app.py
+
+# With public URL (share link)
+# Edit app.py: demo.launch(share=True)
+python app.py
 ```
 
 ## ⚙️ Configuration
 
 ### Adjust Chunk Size
+
 Edit `data_processor.py`:
+
 ```python
 processor = DataProcessor(chunk_size=150)  # 100-200 words
 ```
 
 ### Adjust Retrieval Count
+
 Edit `retriever.py`:
+
 ```python
 retriever = Retriever(top_k=5)  # Top-k documents
 ```
 
 ### LLM Settings
+
 Edit `llm_handler.py`:
+
 ```python
 llm = LLMHandler(
     load_in_4bit=True,      # Memory-efficient
@@ -141,22 +209,41 @@ llm = LLMHandler(
 ## 🔧 Troubleshooting
 
 ### Out of Memory?
-```bash
-# Use simplified model
-python main.py --launch --simple
+
+Edit `app.py` to use simplified model:
+
+```python
+# Change in app.py:
+demo = create_interface(use_simple_model=True)
+```
+
+Or reduce batch size in `embeddings.py`:
+
+```python
+batch_size = 16  # Reduce from 32
 ```
 
 ### CUDA Not Available?
-System auto-detects and uses CPU. For GPU:
+
+System auto-detects and uses CPU. For GPU acceleration:
+
 ```bash
 # Install PyTorch with CUDA
 pip install torch --index-url https://download.pytorch.org/whl/cu118
 ```
 
 ### FAISS Index Missing?
+
+Extract the pre-built index:
+
 ```bash
-# Build first
-python main.py --build
+# Index files should be in project root:
+# - faiss_index.bin
+# - documents.pkl
+
+# If missing, extract from rag_index.zip or rebuild:
+python data_processor.py
+python embeddings.py
 ```
 
 ## 📊 Technical Stack
@@ -164,7 +251,7 @@ python main.py --build
 - **LLM**: Mistral 7B Instruct (4-bit quantized)
 - **Embeddings**: all-MiniLM-L6-v2 (384-dim)
 - **Vector DB**: FAISS (cosine similarity)
-- **Framework**: LangChain, HuggingFace Transformers
+- **Framework**: HuggingFace Transformers, bitsandbytes
 - **UI**: Gradio
 - **Dataset**: MyFixit (iFixit repair guides)
 
